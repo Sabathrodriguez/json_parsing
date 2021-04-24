@@ -6,11 +6,14 @@
 #include "SSClient.h"
 #include "SSnetworking.h"
 
+#define BUFFERSIZE 1024
 
 SSClient::SSClient(int socket)
 {
-	this->buffer = new char[1024];
+	this->buffer = new char[BUFFERSIZE];
 	this->socket = socket;
+	this->bufOffset = 0;
+	this->bufSize = BUFFERSIZE;
 }
 
 void SSClient::clientClose()
@@ -18,6 +21,7 @@ void SSClient::clientClose()
 	//close FD, free up any memory, return
 	close(socket);
 	free(buffer);
+	
 	return;
 }
 
@@ -48,21 +52,25 @@ SSnetworking *SSClient::getSpreadsheet()
 
 char* SSClient::readRequest()
 {
+
+	char * bufPtr = &(this->buffer[bufOffset]);
 	//change recv to read when go to linux
-#ifdef __linux__
-	int bytesRead = read(this->socket, this->buffer, sizeof(this->buffer));
-#elif defined _WIN32
-	int bytesRead = recv(this->socket, this->buffer, sizeof(this->buffer), 0);
-#endif
+	int bytesRead = read(this->socket, bufPtr, bufSize - bufOffset);
 	if (bytesRead == 0)
 	{
 		//remove client from clients
 		close(this->socket);
 		return NULL;
 	}
+	bufOffset += bytesRead;
 	//null terminate the string so we dont use garbage information
-	this->buffer[bytesRead] = 0;	
+	this->buffer[bufOffset] = 0;	
 	return  this->buffer;
+}
+
+void SSClient::resetBuffer()
+{
+	bufOffset = 0;
 }
 
 void SSClient::writeResponse(char* c)

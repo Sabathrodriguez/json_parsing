@@ -24,12 +24,19 @@ private:
 	void replyToClient(SSClient c, char* message);
 
 	void replyToAllClients(char* message);
+	
+	std::string cellToJson(std::string location, std::string contents);
+	char *userDisconnected(int ID);
+	char* userSelectToJson(char *location, int ID, char *name);
 
 public:
 	SSnetworking(char* ssname);
 
 	std::string getName();
 
+	void sendSpreadsheetToClient(SSClient *client);
+	void sendUserLocationsToClient(SSClient *client);
+	void sendUIDToClient(SSClient *client);
 	void addClient(SSClient *c);
 	void removeClient(SSClient *c);
 

@@ -10,7 +10,7 @@ Spreadsheet: $(OBJS)
 	
 SSClient.o: SSClient.cpp SSClient.h
 
-SSserver.o: SSserver.cpp SSserver.h
+SSserver.o: SSserver.cpp SSserver.h jsoncpp.cpp json.h json-forwards.h
 
 SSnetworking.o: SSnetworking.cpp SSnetworking.h
 

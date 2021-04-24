@@ -11,7 +11,7 @@
 #include <sys/time.h>
 #include "SSClient.h"
 #include "SSnetworking.h"
-#include "json.h"
+#include "jsoncpp.cpp"
 
 
 //namespace fs = std::experimental::filesystem;
@@ -20,8 +20,9 @@ int acceptNewConnection(int sockfd, struct sockaddr* address, int addrsize);
 int processMessageFromClient(int sock);
 SSClient * getClientBySocket(int sock);
 SSnetworking * openSpreadsheet(char * request);
-SSnetworking * getSpreadsheetFromVector(char * request);
+SSnetworking * getFromSpreadsheetVector(char * ssName);
 char * trimNewline(char *value);
+bool completeCommand(char * message);
 
 std::vector<SSnetworking*> spreadsheetVector;
 
@@ -31,6 +32,7 @@ fd_set connections;
 
 int main()
 {
+	
 	int selectReturn;
 
 	fd_set readFDs, writeFDs, exceptFDs;
@@ -73,16 +75,16 @@ int main()
 	
 	while (true)
 	{
-		std::cout<<"loop"<<std::endl;
+
 		timeout.tv_sec = 3600;
 		readFDs = connections;
 		FD_ZERO(&writeFDs);
 		exceptFDs = connections;
-		selectReturn = select(FD_SETSIZE, &readFDs, &writeFDs, &exceptFDs, &timeout);
-		// std::cout<<"5"<<std::endl;
+		selectReturn = select(maxFDs + 1, &readFDs, &writeFDs, &exceptFDs, &timeout);
 	
 		if (FD_ISSET(sockfd, &readFDs))
 		{	
+
 			//we have a new client to add
 			int clientSock = acceptNewConnection(sockfd, (struct sockaddr*) &address, addrsize);
 
@@ -106,7 +108,6 @@ int main()
 
 			if (FD_ISSET(i, &readFDs))
 			{
-				std::cout<<"prc"<<std::endl;
 				int ret = processMessageFromClient(i);
 				if (ret == -1)
 				{
@@ -144,15 +145,22 @@ int processMessageFromClient(int sock)
 	//process Messages
 	//read from the client
 	char* request = client->readRequest();
-    
-    std::cout << request << std::endl;
+
+	std::cout << request << std::endl;
 	
 	if (request == NULL)
 	{
 		//client closeed, remove them from SS, return error to caller
+		client->getSpreadsheet()->removeClient(client);
 		return -1;
 	}
+	if (!completeCommand(request))
+	{
+		return 0;
+	}
 	request = trimNewline(request);
+	
+
 	//process request
 	if (client->getName().size()  == 0)
 	{
@@ -173,35 +181,61 @@ int processMessageFromClient(int sock)
 		//if so, add to the existing one. 
 		//if NOT, open the spreadsheet, (or create if DNE) load contents into spreadsheet object
 		//add to spreadsheetVector
-		SSnetworking *addSpreadsheet = getSpreadsheetFromVector(request);	
+		SSnetworking *addSpreadsheet = getFromSpreadsheetVector(request);	
 		if ( addSpreadsheet == NULL)
 		{
-            std::cout<<"1"<<std::endl;
 			addSpreadsheet = openSpreadsheet(request);
 			if (addSpreadsheet == NULL)
 			{
 				abort();
 			}
-            std::cout<<"2"<<std::endl;
 			spreadsheetVector.push_back(addSpreadsheet);
-			std::cout<<"3"<<std::endl;
+			
 		}
 		addSpreadsheet->addClient(client);
-		std::cout<<"4"<<std::endl;
+
+
+		addSpreadsheet->sendSpreadsheetToClient(client);
+		addSpreadsheet->sendUserLocationsToClient(client);
+		addSpreadsheet->sendUIDToClient(client);
 	}
+	
 	else {
-	  std::cout << "type in test json" << std::endl;
 		//process command
-	  // Json::Value root;
-	  //root << request;
 
-	  // std::cout << root.get("requestType","NULL").asString();
-	  
-        sendOutSpreadsheets(client);
+		std::string new_str = request;
+		Json::Value root;
+		Json::Reader reader;
+
+		bool parsingSuccessful = reader.parse(new_str, root);
+
+		if (parsingSuccessful)
+		{
+			const Json::Value mynames = root["requestType"];
+			std::cout << "size: " << mynames.size() << std::endl;
+			for (int index = 0; index < mynames.size(); ++index)
+			{
+				std::cout << mynames[index] << std::endl;
+			}
+		}
 
 	}
+	//got a complete command, can now add info at start of buffer
+	client->resetBuffer();
 
 	return 0;
+
+}
+
+bool completeCommand(char * message)
+{
+	//checks to see if last character of message is '\n'
+	int len = strlen(message);
+	if (message[len-1] != '\n')
+	{
+		return false;
+	}
+	return true;
 
 }
 
@@ -221,17 +255,29 @@ char * trimNewline(char *value)
 }
 
 //get the spreadsheet if it exists in the vector, NULL if not
-SSnetworking * getSpreadsheetFromVector(char * request)
+SSnetworking * getFromSpreadsheetVector(char * ssName)
 {
-		
+	std::string name;
+	SSnetworking * currSS;
+	//iterate through spreadsheet vector to find a match with ssName
+	for (int i = 0; i < spreadsheetVector.size(); i++)
+	{
+		currSS = spreadsheetVector[i];
+		name = currSS->getName();
+		if (strcmp( name.c_str(), ssName) == 0)
+		{
+			//one exists, return it
+			return currSS;
+		}
+	}
 	return NULL;
 }
 
 //open the spreadsheet if it exists in the folder of spreadsheets
 //otherwise creates a new file and opens it
-SSnetworking * openSpreadsheet(char * request)
+SSnetworking * openSpreadsheet(char * ssName)
 {
-	return new SSnetworking(request);
+	return new SSnetworking(ssName);
 	return NULL;
 }
 
@@ -317,5 +363,7 @@ void sendOutSpreadsheets(SSClient* client)
 		client->writeResponse(eol);
 	}
 	client->writeResponse(eol);
+
+
 
 }

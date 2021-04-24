@@ -10,7 +10,8 @@ private:
 	std::string userName;
 	int socket;
 	SSnetworking *spreadsheet;
-	
+	int bufOffset;	
+	int bufSize;
 	char *buffer;
 
 public:
@@ -20,6 +21,7 @@ public:
 	void setName(std::string name);
 	std::string getName();
 
+	void resetBuffer(); 
 	int getSocket();
 
 	void setSpreadsheet(SSnetworking* ss);
