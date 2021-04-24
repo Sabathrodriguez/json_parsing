@@ -1,0 +1,10 @@
+﻿  SSClient.cpp
+C:\Users\yummy\DockerStuff\SpreadsheetServer\SSClient.cpp(4,10): fatal error C1083: Cannot open include file: 'sys/socket.h': No such file or directory
+  SSnetworking.cpp
+C:\Users\yummy\DockerStuff\SpreadsheetServer\SSnetworking.cpp(11,12): warning C4018: '>': signed/unsigned mismatch
+C:\Users\yummy\DockerStuff\SpreadsheetServer\SSnetworking.cpp(42,20): warning C4018: '<': signed/unsigned mismatch
+C:\Users\yummy\DockerStuff\SpreadsheetServer\SSnetworking.cpp(69,20): warning C4018: '<': signed/unsigned mismatch
+  SSserver.cpp
+  The contents of <filesystem> are available only with C++17 or later.
+C:\Users\yummy\DockerStuff\SpreadsheetServer\SSserver.cpp(6,10): fatal error C1083: Cannot open include file: 'sys/socket.h': No such file or directory
+  Generating Code...
